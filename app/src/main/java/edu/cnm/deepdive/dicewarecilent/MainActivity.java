@@ -29,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
   private ListView words;
   private DicewareService service;
   private ProgressBar progressSpinner;
+  private int numWords;
+  // TODO implament numwords
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
   private void setupUi() {
     setContentView(R.layout.activity_main);
     length = findViewById(R.id.length);
+    numWords= Integer.parseInt(length.getText().toString());
     progressSpinner = findViewById(R.id.progress_spinner);
     words = findViewById(R.id.words);
     generate = findViewById(R.id.generate);
