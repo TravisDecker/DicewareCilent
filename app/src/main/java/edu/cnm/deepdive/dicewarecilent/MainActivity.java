@@ -1,12 +1,15 @@
 package edu.cnm.deepdive.dicewarecilent;
 
+import android.content.Intent;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.support.design.widget.TextInputEditText;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.ArrayAdapter;
@@ -30,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
   private DicewareService service;
   private ProgressBar progressSpinner;
   private int numWords;
-  // TODO implament numwords
+  // TODO implement numwords
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -40,12 +43,33 @@ public class MainActivity extends AppCompatActivity {
 
   }
 
+  @Override
+  public boolean onCreateOptionsMenu(Menu menu) {
+    getMenuInflater().inflate(R.menu.options, menu);
+    return true;
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    boolean handled = true;
+    switch (item.getItemId()) {
+      case R.id.sign_out:
+        signOut();
+        break;
+      default:
+        handled = super.onOptionsItemSelected(item);
+    }
+
+    return handled;
+  }
+
   private void setupService() {
     Gson gson = new GsonBuilder()
         .excludeFieldsWithoutExposeAnnotation()
         .create();
     service = new Retrofit.Builder()
-        .baseUrl("http://10.0.2.2:8080/")
+       .baseUrl("http://10.0.2.2:8080/")
+       // .baseUrl("http://localhost:8080")
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
         .create(DicewareService.class);
@@ -54,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
   private void setupUi() {
     setContentView(R.layout.activity_main);
     length = findViewById(R.id.length);
-    numWords= Integer.parseInt(length.getText().toString());
+    numWords = Integer.parseInt(length.getText().toString());
     progressSpinner = findViewById(R.id.progress_spinner);
     words = findViewById(R.id.words);
     generate = findViewById(R.id.generate);
@@ -66,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
     });
     length.addTextChangedListener(new TextWatcher() {
       CharSequence before;
+
       @Override
       public void beforeTextChanged(CharSequence s, int start, int count, int after) {
         before = s;
@@ -89,6 +114,16 @@ public class MainActivity extends AppCompatActivity {
     });
   }
 
+  private void signOut() {
+    DicewareApplication application = DicewareApplication.getInstance();
+    application.getClient().signOut().addOnCompleteListener(this, (task) -> {
+      application.setAccount(null);
+      Intent intent = new Intent(this, LoginActivity.class);
+      intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+      startActivity(intent);
+    });
+  }
+
   private class GenerateTask extends AsyncTask<Void, Void, String[]> {
 
     @Override
@@ -100,7 +135,9 @@ public class MainActivity extends AppCompatActivity {
     protected String[] doInBackground(Void... voids) {
       String[] passphrase = null;
       try {
-        Call<String[]> call = service.get(Integer.parseInt(length.getText().toString()));
+        String token = getString(
+            R.string.oauth2_header, DicewareApplication.getInstance().getAccount().getIdToken());
+        Call<String[]> call = service.get(token, numWords);
         Response<String[]> response = call.execute();
         if (response.isSuccessful()) {
           passphrase = response.body();
